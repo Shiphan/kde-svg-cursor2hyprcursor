@@ -41,7 +41,7 @@ def convert-cursors [source: path, working: path, cursors_dir: string, resize_al
 	let alias = ls --short-names --long $"($source)/cursors_scalable"
 		| where type == symlink
 		| select name target
-		| reduce {|it, acc|
+		| reduce --fold {} {|it, acc|
 			$acc | upsert $it.target { $in | default [] | append $it.name }
 		}
 	ls --short-names $"($source)/cursors_scalable"
@@ -63,49 +63,70 @@ def convert-cursors [source: path, working: path, cursors_dir: string, resize_al
 def convert-metadata [source: path, dir_name: string, alias: list<string>, resize_algorithm: string] {
 	let metadata = open $"($source)/cursors_scalable/($dir_name)/metadata.json"
 		| into float nominal_size hotspot_x hotspot_y
+	let svg = $metadata
+		| get filename
+		| reduce --fold {} {|it, acc|
+			let svg = open $"($source)/cursors_scalable/($dir_name)/($it)" --raw | from xml
+			$acc | upsert $it $svg
+		}
 
 	let define_override = $alias | str join ";"
 	if ($metadata | length) > 1 {
-		convert-animated ($metadata | into float delay) $define_override $resize_algorithm
+		convert-animated ($metadata | into float delay) $svg $define_override $resize_algorithm
 	} else {
-		convert-static ($metadata | get 0) $define_override $resize_algorithm
+		convert-static ($metadata | get 0) $svg $define_override $resize_algorithm
 	}
 }
 
 def convert-static [
 	metadata: record<filename: string, nominal_size: float, hotspot_x: float, hotspot_y: float>,
+	svg: record,
 	define_override: string,
 	resize_algorithm: string,
 ] {
+	let svg_size = $svg | get $metadata.filename | get-svg-size
 	{
 		resize_algorithm: $resize_algorithm,
 		hotspot_x: ($metadata.hotspot_x / $metadata.nominal_size),
 		hotspot_y: ($metadata.hotspot_y / $metadata.nominal_size),
-		nominal_size: 1.0,
+		nominal_size: ($metadata.nominal_size / $svg_size),
 		define_override: $define_override,
-		define_size: $"($metadata.nominal_size),($metadata.filename)",
+		define_size: $"0,($metadata.filename)",
 	}
 }
 
 def convert-animated [
 	metadata: list<record<filename: string, nominal_size: float, hotspot_x: float, hotspot_y: float, delay: float>>,
+	svg: record,
 	define_override: string,
 	resize_algorithm: string,
 ] {
 	let first_frame = $metadata | get 0
+	let svg_size = $svg | get $first_frame.filename | get-svg-size
+	let nominal_size = $first_frame.nominal_size / $svg_size
 	let frames = $metadata
-		| each {
-			(assert ($in.hotspot_x == $first_frame.hotspot_x and $in.hotspot_y == $first_frame.hotspot_y)
+		| each {|frame|
+			(assert ($frame.hotspot_x == $first_frame.hotspot_x and $frame.hotspot_y == $first_frame.hotspot_y)
 				"Hyprcursor only support one hotspot even for animated cursor")
+			let svg_size = $svg | get $frame.filename | get-svg-size
+			(assert ($frame.nominal_size / $svg_size == $nominal_size)
+				"Hyprcursor only support one nominal size even for animated cursor")
 
-			$"($in.nominal_size),($in.filename),($in.delay)"
+			$"0,($frame.filename),($frame.delay)"
 		}
 	{
 		resize_algorithm: $resize_algorithm,
 		hotspot_x: ($first_frame.hotspot_x / $first_frame.nominal_size),
 		hotspot_y: ($first_frame.hotspot_y / $first_frame.nominal_size),
-		nominal_size: 1.0,
+		nominal_size: $nominal_size,
 		define_override: $define_override,
 		define_size: ($frames | str join ";"),
 	}
+}
+
+def get-svg-size []: any -> float {
+	let width = $in.attributes.width | into float
+	let height = $in.attributes.height | into float
+	assert ($width == $height) "Hyprcursor only support cursor with aspect ratio of 1:1"
+	$width
 }
