@@ -1,8 +1,8 @@
 #!/usr/bin/env nu
 
-def main [soruce: path, --working: path = "./working", --target: path = "./target", --cursors-directory: string = "hyprcursors"] {
-	convert-index-theme $soruce $working $cursors_directory
-	convert-cursors $soruce $working $cursors_directory
+def main [source: path, --working: path = "./working", --target: path = "./target", --cursors-directory: string = "hyprcursors"] {
+	convert-index-theme $source $working $cursors_directory
+	convert-cursors $source $working $cursors_directory
 
 	mkdir $target
 	hyprcursor-util --create $working --output $target
@@ -10,9 +10,9 @@ def main [soruce: path, --working: path = "./working", --target: path = "./targe
 	null
 }
 
-def convert-index-theme [soruce: path, working: path, cursors_dir: string] {
+def convert-index-theme [source: path, working: path, cursors_dir: string] {
 	mkdir $working
-	let index_theme = open $"($soruce)/index.theme" --raw
+	let index_theme = open $"($source)/index.theme" --raw
 		| from ini
 		| get "Icon Theme"
 
@@ -28,31 +28,31 @@ def convert-index-theme [soruce: path, working: path, cursors_dir: string] {
 		| save $"($working)/manifest.toml"
 }
 
-def convert-cursors [soruce: path, working: path, cursors_dir: string] {
+def convert-cursors [source: path, working: path, cursors_dir: string] {
 	mkdir $"($working)/($cursors_dir)"
-	let alias = ls --short-names --long $"($soruce)/cursors_scalable"
+	let alias = ls --short-names --long $"($source)/cursors_scalable"
 		| where type == symlink
 		| select name target
 		| reduce {|it, acc|
 			$acc | upsert $it.target { $in | default [] | append $it.name }
 		}
-	ls --short-names $"($soruce)/cursors_scalable"
+	ls --short-names $"($source)/cursors_scalable"
 		| where type == dir
 		| get name
 		| each {|name|
 			mkdir $"($working)/($cursors_dir)/($name)"
-			convert-metadata $soruce $name ($alias | get --optional $name | default [])
+			convert-metadata $source $name ($alias | get --optional $name | default [])
 				| { General: $in }
 				| save $"($working)/($cursors_dir)/($name)/meta.toml"
-			ls --full-paths $"($soruce)/cursors_scalable/($name)"
+			ls --full-paths $"($source)/cursors_scalable/($name)"
 				| where name ends-with ".svg"
 				| get name
 				| each { cp $in $"($working)/($cursors_dir)/($name)/" }
 		}
 }
 
-def convert-metadata [soruce: path, dir_name: string, alias: list<string>] {
-	let metadata = open $"($soruce)/cursors_scalable/($dir_name)/metadata.json"
+def convert-metadata [source: path, dir_name: string, alias: list<string>] {
+	let metadata = open $"($source)/cursors_scalable/($dir_name)/metadata.json"
 		| into float nominal_size hotspot_x hotspot_y
 
 	let define_override = $alias | str join ";"
