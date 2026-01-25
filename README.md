@@ -1,17 +1,21 @@
 # KDE SVG Cursor to Hyprcursor
 
+Convert vector cursor in KDE SVG cursor format to hyprcursor format
+
+---
+
 Usage: ./convert.nu \<source\> [OPTIONS] \
 Options:
-- --working \<working-dir\> \
+- --working `<working-dir>` \
     working directory, defaults to `./working` \
     the working directory is used to store files at the [working state](https://github.com/hyprwm/hyprcursor/blob/main/hyprcursor-util/README.md#states), \
     effectively are source files that hyprcursor-util can understand
-- --target \<target-dir\> \
+- --target `<target-dir>` \
     target directory, defaults to `./target`
-- --cursors-directory \<cursors-dir\> \
+- --cursors-directory `<cursors-dir>` \
     cursors directory name, defaults to `hyprcursors` \
     cursor file will under `<working-dir>/<cursors-dir>/example-cursor/example-cursor.svg`
-- --resize-algorithm: \<resize-algorithm\> \
+- --resize-algorithm: `<resize-algorithm>` \
     defaults to `bilinear`, \
     currently available value: `bilinear`, `nearest`, `none`
 
@@ -22,10 +26,16 @@ Example Usage:
 
 SVG and meta.toml file will be output to `<working-dir>/<cursors-dir>/example-cursor/{example.svg, meta.toml}`, \
 then, the compiled hyprcursor will be output to `<target-dir>/theme_<cursor-name>/<cursors-dir>/example-cursor.hlc`, \
-where the <cursor-name> is defined in `index.theme` from the source
+where the `<cursor-name>` is defined in `index.theme` from the source
+
+---
+
+Dependencies: nu, nu_plugin_formats, hyprcursor-util
+- Arch: nushell, hyprcursor
+- Nix: nushell, nushellPlugins.formats, hyprcursor
 
 > [!NOTE]
-> This script use the core plugin `formats` to parse `index.theme` file,
+> This script use the core plugin `formats` to parse `index.theme` file, \
 > to load a plugin only for this script, you can use the `--plugins` flag of nushell
 > ```sh
 > nu --plugins "[<path-to-plugin-formats>]" ./convert.nu <source> # other options...
