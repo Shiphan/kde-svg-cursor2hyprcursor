@@ -87,8 +87,8 @@ def convert-static [
 	let svg_size = $svg | get $metadata.filename | get-svg-size
 	{
 		resize_algorithm: $resize_algorithm,
-		hotspot_x: ($metadata.hotspot_x / $metadata.nominal_size),
-		hotspot_y: ($metadata.hotspot_y / $metadata.nominal_size),
+		hotspot_x: ($metadata.hotspot_x / $svg_size),
+		hotspot_y: ($metadata.hotspot_y / $svg_size),
 		nominal_size: ($metadata.nominal_size / $svg_size),
 		define_override: $define_override,
 		define_size: $"0,($metadata.filename)",
@@ -103,12 +103,14 @@ def convert-animated [
 ] {
 	let first_frame = $metadata | get 0
 	let svg_size = $svg | get $first_frame.filename | get-svg-size
+	let hotspot_x = $first_frame.hotspot_x / $svg_size
+	let hotspot_y = $first_frame.hotspot_y / $svg_size
 	let nominal_size = $first_frame.nominal_size / $svg_size
 	let frames = $metadata
 		| each {|frame|
-			(assert equal [$frame.hotspot_x, $frame.hotspot_y] [$first_frame.hotspot_x, $first_frame.hotspot_y]
-				"Hyprcursor only support one hotspot even for animated cursor")
 			let svg_size = $svg | get $frame.filename | get-svg-size
+			(assert equal [($frame.hotspot_x / $svg_size), ($frame.hotspot_y / $svg_size)] [$hotspot_x, $hotspot_y]
+				"Hyprcursor only support one hotspot even for animated cursor")
 			(assert equal ($frame.nominal_size / $svg_size) $nominal_size
 				"Hyprcursor only support one nominal size even for animated cursor")
 
@@ -116,8 +118,8 @@ def convert-animated [
 		}
 	{
 		resize_algorithm: $resize_algorithm,
-		hotspot_x: ($first_frame.hotspot_x / $first_frame.nominal_size),
-		hotspot_y: ($first_frame.hotspot_y / $first_frame.nominal_size),
+		hotspot_x: $hotspot_x
+		hotspot_y: $hotspot_y,
 		nominal_size: $nominal_size,
 		define_override: $define_override,
 		define_size: ($frames | str join ";"),
