@@ -106,10 +106,10 @@ def convert-animated [
 	let nominal_size = $first_frame.nominal_size / $svg_size
 	let frames = $metadata
 		| each {|frame|
-			(assert ($frame.hotspot_x == $first_frame.hotspot_x and $frame.hotspot_y == $first_frame.hotspot_y)
+			(assert equal [$frame.hotspot_x, $frame.hotspot_y] [$first_frame.hotspot_x, $first_frame.hotspot_y]
 				"Hyprcursor only support one hotspot even for animated cursor")
 			let svg_size = $svg | get $frame.filename | get-svg-size
-			(assert ($frame.nominal_size / $svg_size == $nominal_size)
+			(assert equal ($frame.nominal_size / $svg_size) $nominal_size
 				"Hyprcursor only support one nominal size even for animated cursor")
 
 			$"0,($frame.filename),($frame.delay)"
@@ -127,6 +127,6 @@ def convert-animated [
 def get-svg-size []: any -> float {
 	let width = $in.attributes.width | into float
 	let height = $in.attributes.height | into float
-	assert ($width == $height) "Hyprcursor only support cursor with aspect ratio of 1:1"
+	assert equal $width $height "Hyprcursor only support cursor with aspect ratio of 1:1"
 	$width
 }
