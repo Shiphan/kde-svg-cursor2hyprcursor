@@ -22,7 +22,7 @@ runCommand "kde-svg-cursor2hyprcursor"
   }
   (
     ''
-      nu --plugins "[${nushellPlugins.formats}/bin/nu_plugin_formats]" \
+      nu --plugins "${nushellPlugins.formats}/bin/nu_plugin_formats" -- \
         ${./convert.nu} \
         "${source}"
 
